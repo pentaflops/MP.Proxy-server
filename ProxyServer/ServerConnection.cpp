@@ -3,19 +3,19 @@
 
 int ServerConnection::Connecting()
 {
-	_socket = socket(AF_INET, SOCK_STREAM, 0);
+	_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if (_socket == INVALID_SOCKET)
 	{
-		_alive = false;
 		return 1;
 	}
 
 	if (connect(_socket, (struct sockaddr*)&_sock_addr, sizeof(_sock_addr)) == SOCKET_ERROR)
 	{
-		_alive = false;
 		return 2;
 	}
+
+	_alive = true;
 
 	return 0;
 }
@@ -27,6 +27,8 @@ size_t ServerConnection::GetData(char *buffer, size_t size_of_buffer)
 	if (len == SOCKET_ERROR || len == 0)
 		_alive = false;
 
+	printf("\t\t[Server][Get] %d\n", len);
+
 	return len;
 }
 
@@ -36,4 +38,6 @@ void ServerConnection::SendData(const char *buffer, size_t len)
 
 	if (result == SOCKET_ERROR)
 		_alive = false;
+
+	printf("\t\t[Server][Send] %d\n", result);
 }

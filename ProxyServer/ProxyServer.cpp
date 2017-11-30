@@ -71,6 +71,7 @@ DWORD ThreadWaitingNewConnections(LPVOID param)
 
 DWORD ThreadProcessingNewConnection(LPVOID param)
 {
+	printf("[OPEN CONNECTION]\n");
 	ClientConnection *client_connection = (ClientConnection *)param;
 
 	sockaddr_in sockaddr;
@@ -105,13 +106,17 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 	server_to_client.to = client_connection;
 	HANDLE thread_server_to_client = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingConnectionData, (LPVOID)&server_to_client, 0, 0);
 
-	WaitForSingleObject(thread_client_to_server, INFINITE);
-	WaitForSingleObject(thread_server_to_client, INFINITE);
+	WaitForSingleObject(thread_client_to_server, 10000);
+	WaitForSingleObject(thread_server_to_client, 10000);
+	TerminateThread(thread_client_to_server, 0);
+	TerminateThread(thread_server_to_client, 0);
 	CloseHandle(thread_client_to_server);
 	CloseHandle(thread_server_to_client);
 
 	delete client_connection;
 	delete server_connection;
+
+	printf("[CLOSE CONNECTION]\n");
 
 	return 0;
 }
