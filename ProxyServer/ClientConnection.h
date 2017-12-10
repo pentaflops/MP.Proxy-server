@@ -10,6 +10,6 @@ public:
 
 	int GetSocketAddress(const char *buffer, size_t len, sockaddr_in &sockaddr);
 
-	size_t GetData(char *buffer, size_t size_of_buffer);
-	void SendData(const char *buffer, size_t len);
+	size_t GetData(char *buffer, size_t size_of_buffer, Event *_Event = nullptr);
+	void SendData(const char *buffer, size_t len, Event *_Event = nullptr);
 };

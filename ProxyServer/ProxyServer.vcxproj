@@ -74,7 +74,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Event.h" />
     <ClInclude Include="ClientConnection.h" />
+    <ClInclude Include="IEventHandler.h" />
+    <ClInclude Include="Logging.h" />
     <ClInclude Include="ProxyServer.h" />
     <ClInclude Include="ServerConnection.h" />
     <ClInclude Include="stdafx.h" />
@@ -83,6 +86,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientConnection.cpp" />
+    <ClCompile Include="Event.cpp" />
+    <ClCompile Include="Logging.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ProxyServer.cpp" />
     <ClCompile Include="ServerConnection.cpp" />

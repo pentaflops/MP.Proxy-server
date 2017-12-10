@@ -20,24 +20,26 @@ int ServerConnection::Connecting()
 	return 0;
 }
 
-size_t ServerConnection::GetData(char *buffer, size_t size_of_buffer)
+size_t ServerConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Event)
 {
 	int len = recv(_socket, buffer, size_of_buffer, 0);
 
-	if (len == SOCKET_ERROR || len == 0)
+	if (len == SOCKET_ERROR || len <= 0)
 		_alive = false;
-
-	printf("\t\t[Server][Get] %d\n", len);
+	
+	if (_Event != nullptr)
+		_Event->ServerGetData(_sock_addr, buffer, len);
 
 	return len;
 }
 
-void ServerConnection::SendData(const char *buffer, size_t len)
+void ServerConnection::SendData(const char *buffer, size_t len, Event *_Event)
 {
 	int result = send(_socket, buffer, len, 0);
 
 	if (result == SOCKET_ERROR)
 		_alive = false;
 
-	printf("\t\t[Server][Send] %d\n", result);
+	if (_Event != nullptr)
+		_Event->ServerSendData(_sock_addr, buffer, len);
 }

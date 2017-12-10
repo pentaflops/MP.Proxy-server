@@ -1,10 +1,11 @@
 #include "stdafx.h"
-#include "ProxyServer.h"
 #include "ClientConnection.h"
 #include "ServerConnection.h"
+#include "ProxyServer.h"
 
 int ProxyServer::StartServer(u_short port)
 {
+	// »нициализаци€ Winsock
 	WSADATA wsaData;
 	if (WSAStartup(0x202, &wsaData) != NO_ERROR)
 	{
@@ -12,6 +13,7 @@ int ProxyServer::StartServer(u_short port)
 		return 1;
 	}
 
+	// »нициализаци€ главного сокета на listen
 	_listen_socket = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (_listen_socket == INVALID_SOCKET)
@@ -41,7 +43,9 @@ int ProxyServer::StartServer(u_short port)
 	}
 
 	_server_started = true;
-	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadWaitingNewConnections, (LPVOID)this, 0, 0);
+	_waiting_new_connections_thread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadWaitingNewConnections, (LPVOID)this, 0, 0);
+
+	_event.ProxyServerStarted(port);
 
 	return 0;
 }
@@ -52,30 +56,54 @@ void ProxyServer::StopServer()
 }
 
 
+// ѕоток, который принимает все соединени€ на главный сокет прокси-сервера
 DWORD ThreadWaitingNewConnections(LPVOID param)
 {
 	ProxyServer *proxy_server = (ProxyServer *)param;
 
-	while (proxy_server->_server_started)
+	while (proxy_server->isServerToggle())
 	{
 		sockaddr_in sock_addr;
 		int sock_addr_len = sizeof(sock_addr);
 		SOCKET client_socket = accept(proxy_server->_listen_socket, (sockaddr *)&sock_addr, &sock_addr_len);
 
 		ClientConnection *client_connection = new ClientConnection(client_socket, sock_addr);
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingNewConnection, (LPVOID)client_connection, 0, 0);
+
+		proxy_server->GetEvent()->OpenConnection(sock_addr);
+		PairPServerCConnection *pairPServerCConnection = new PairPServerCConnection;
+		pairPServerCConnection->client_connection = client_connection;
+		pairPServerCConnection->proxy_server = proxy_server;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingNewConnection, (LPVOID)pairPServerCConnection, 0, 0);
 	}
 
 	return 0;
 }
 
+// ѕоток, который занимаетс€ обработкой отдельного подключени€ клиента
 DWORD ThreadProcessingNewConnection(LPVOID param)
 {
-	printf("[OPEN CONNECTION]\n");
-	ClientConnection *client_connection = (ClientConnection *)param;
+	ClientConnection *client_connection = ((PairPServerCConnection *)param)->client_connection;
+	ProxyServer *proxy_server = ((PairPServerCConnection *)param)->proxy_server;
+	delete param;
+
+	try
+	{
+		if (!proxy_server->isServerToggle())
+		{
+			delete client_connection;
+			return 0;
+		}
+	}
+	catch (...)
+	{
+		delete client_connection;
+		return 0;
+	}
 
 	sockaddr_in sockaddr;
 	char buffer[BUFF_SIZE];
+
+	// ѕолучаем данные от клиента, чтобы узнать адресс ссервера (получател€)
 	size_t len = client_connection->GetData(buffer, sizeof(buffer));
 
 	if (client_connection->GetSocketAddress(buffer, len, sockaddr) != 0)
@@ -94,47 +122,64 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 		return 0;
 	}
 
+	// отправл€ем ранее полученные данные (дл€ получени€ адресса сервера)
 	server_connection->SendData(buffer, len);
 
+
+	// —оздаем два отдельных потока дл€ передачи данных между клиентом и сервером
+	
+	// клиент-сервер
 	PairConnections client_to_server;
 	client_to_server.from = client_connection;
 	client_to_server.to = server_connection;
+	client_to_server.proxy_server = proxy_server;
 	HANDLE thread_client_to_server = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingConnectionData, (LPVOID)&client_to_server, 0, 0);
-
+	
+	// сервер-клиент
 	PairConnections server_to_client;
 	server_to_client.from = server_connection;
 	server_to_client.to = client_connection;
+	server_to_client.proxy_server = proxy_server;
 	HANDLE thread_server_to_client = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingConnectionData, (LPVOID)&server_to_client, 0, 0);
 
+	// «акрытие соединени€. ∆дем завершени€ подключени€ клиента и завершаем передачу данных сервер-клиент через 2 секунды (или раньше, если поток сам закончил работу)
 	WaitForSingleObject(thread_client_to_server, 10000);
-	WaitForSingleObject(thread_server_to_client, 10000);
-	TerminateThread(thread_client_to_server, 0);
+	WaitForSingleObject(thread_server_to_client, 2000);
 	TerminateThread(thread_server_to_client, 0);
 	CloseHandle(thread_client_to_server);
 	CloseHandle(thread_server_to_client);
 
+	proxy_server->GetEvent()->CloseConnection(client_connection->GetSockaddr());
+
 	delete client_connection;
 	delete server_connection;
-
-	printf("[CLOSE CONNECTION]\n");
 
 	return 0;
 }
 
+// ѕоток, который обеспечивает передачу данных (клиент-сервер или сервер-клиент)
 DWORD ThreadProcessingConnectionData(LPVOID param)
 {
 	PairConnections *connections = (PairConnections *)param;
+	ProxyServer *proxy_server = connections->proxy_server;
 
 	char buffer[BUFF_SIZE];
 	int len = 0;
 
-	while (connections->from->isAlive() && connections->to->isAlive())
+	try
 	{
-		memset(buffer, 0, sizeof(buffer));
+		while (connections->from->isAlive() && connections->to->isAlive() && proxy_server->isServerToggle())
+		{
+			memset(buffer, 0, sizeof(buffer));
 
-		len = connections->from->GetData(buffer, sizeof(buffer));
-		if (len > 0)
-			connections->to->SendData(buffer, len);
+			len = connections->from->GetData(buffer, sizeof(buffer), proxy_server->GetEvent());
+			if (len > 0)
+				connections->to->SendData(buffer, len, proxy_server->GetEvent());
+		}
+	}
+	catch (...)
+	{
+		return 0;
 	}
 
 	return 0;

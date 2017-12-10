@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "ClientConnection.h"
 
-#include <string>
-
 // Необходимо переписать красиво, чтобы поддерживались как минимум GET и POST запросы
 int ClientConnection::GetSocketAddress(const char *buffer, size_t len, sockaddr_in &sockaddr)
 {
@@ -41,31 +39,31 @@ int ClientConnection::GetSocketAddress(const char *buffer, size_t len, sockaddr_
 		sockaddr.sin_port = htons(port);
 
 		//Заполняем адресс из HTTP
-
-		printf("\t[FROM] %s:%d\n", host.c_str(), port);
 	}
 
 	return 0;
 }
 
-size_t ClientConnection::GetData(char *buffer, size_t size_of_buffer)
+size_t ClientConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Event)
 {
 	int len = recv(_socket, buffer, size_of_buffer, 0);
 
-	if (len == SOCKET_ERROR || len == 0)
+	if (len == SOCKET_ERROR || len <= 0)
 		_alive = false;
 
-	printf("\t\t[Client][Get] %d\n", len);
+	if (_Event != nullptr)
+		_Event->ClientGetData(_sock_addr, buffer, len);
 
 	return len;
 }
 
-void ClientConnection::SendData(const char *buffer, size_t len)
+void ClientConnection::SendData(const char *buffer, size_t len, Event *_Event)
 {
 	int result = send(_socket, buffer, len, 0);
 
 	if (result == SOCKET_ERROR)
 		_alive = false;
 
-	printf("\t\t[Client][Send] %d\n", result);
+	if (_Event != nullptr)
+		_Event->ClientSendData(_sock_addr, buffer, len);
 }
