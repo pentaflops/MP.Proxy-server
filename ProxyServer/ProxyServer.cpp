@@ -145,6 +145,7 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 	// Закрытие соединения. Ждем завершения подключения клиента и завершаем передачу данных сервер-клиент через 2 секунды (или раньше, если поток сам закончил работу)
 	WaitForSingleObject(thread_client_to_server, 10000);
 	WaitForSingleObject(thread_server_to_client, 2000);
+	TerminateThread(thread_client_to_server, 0);
 	TerminateThread(thread_server_to_client, 0);
 	CloseHandle(thread_client_to_server);
 	CloseHandle(thread_server_to_client);
@@ -166,20 +167,13 @@ DWORD ThreadProcessingConnectionData(LPVOID param)
 	char buffer[BUFF_SIZE];
 	int len = 0;
 
-	try
+	while (connections->from->isAlive() && connections->to->isAlive() && proxy_server->isServerToggle())
 	{
-		while (connections->from->isAlive() && connections->to->isAlive() && proxy_server->isServerToggle())
-		{
-			memset(buffer, 0, sizeof(buffer));
+		memset(buffer, 0, sizeof(buffer));
 
-			len = connections->from->GetData(buffer, sizeof(buffer), proxy_server->GetEvent());
-			if (len > 0)
-				connections->to->SendData(buffer, len, proxy_server->GetEvent());
-		}
-	}
-	catch (...)
-	{
-		return 0;
+		len = connections->from->GetData(buffer, sizeof(buffer), proxy_server->GetEvent());
+		if (len > 0)
+			connections->to->SendData(buffer, len, proxy_server->GetEvent());
 	}
 
 	return 0;
