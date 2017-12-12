@@ -11,9 +11,9 @@ public:
 	void ProxyServerStarted(const u_short port);
 	void OpenConnection(const sockaddr_in sockaddr);
 	void CloseConnection(const sockaddr_in sockaddr);
-	void ClientGetData(const sockaddr_in sockaddr, const char *buffer, const size_t size_of_buffer);
+	void ClientGetData(const sockaddr_in sockaddr, const char *buffer, const size_t len);
 	void ClientSendData(const sockaddr_in sockaddr, const char *buffer, const size_t len);
-	void ServerGetData(const sockaddr_in sockaddr, const char *buffer, const size_t size_of_buffer);
+	void ServerGetData(const sockaddr_in sockaddr, const char *buffer, const size_t len);
 	void ServerSendData(const sockaddr_in sockaddr, const char *buffer, const size_t len);
 private:
 };

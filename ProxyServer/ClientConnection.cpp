@@ -50,9 +50,11 @@ size_t ClientConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Ev
 
 	if (len == SOCKET_ERROR || len <= 0)
 		_alive = false;
-
-	if (_Event != nullptr)
-		_Event->ClientGetData(_sock_addr, buffer, len);
+	else
+	{
+		if (_Event != nullptr)
+			_Event->ClientGetData(_sock_addr, buffer, len);
+	}
 
 	return len;
 }
@@ -63,7 +65,9 @@ void ClientConnection::SendData(const char *buffer, size_t len, Event *_Event)
 
 	if (result == SOCKET_ERROR)
 		_alive = false;
-
-	if (_Event != nullptr)
-		_Event->ClientSendData(_sock_addr, buffer, len);
+	else
+	{
+		if (_Event != nullptr)
+			_Event->ClientSendData(_sock_addr, buffer, len);
+	}
 }

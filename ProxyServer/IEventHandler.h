@@ -1,11 +1,16 @@
 #pragma once
 
+class Event;
+
 class IEventHandler
 {
 public:
 	IEventHandler() {};
 	virtual ~IEventHandler() {};
 
+	friend Event;
+
+protected:
 	virtual void ProxyServerStarted(const u_short port) = 0;
 	virtual void OpenConnection(const sockaddr_in sockaddr) = 0;
 	virtual void CloseConnection(const sockaddr_in sockaddr) = 0;
