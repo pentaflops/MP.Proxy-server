@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Event.h"
+#include "Event.hpp"
 
 void Event::Subscribe(IEventHandler *_subscriber)
 {

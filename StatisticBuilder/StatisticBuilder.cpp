@@ -1,7 +1,8 @@
 #include "stdafx.h"
-#include "Statistics.h"
 
-size_t Statistics::GetCountOnlineConnection()
+#include "StatisticBuilder.hpp"
+
+size_t StatisticBuilder::GetCountOnlineConnection()
 {
 	size_t count = 0;
 	for (auto connection : _conecions_info)
@@ -11,7 +12,7 @@ size_t Statistics::GetCountOnlineConnection()
 	return count;
 }
 
-size_t Statistics::GetAllSizeOfDataSent()
+size_t StatisticBuilder::GetAllSizeOfDataSent()
 {
 	size_t count = 0;
 	for (auto connection : _conecions_info)
@@ -20,7 +21,7 @@ size_t Statistics::GetAllSizeOfDataSent()
 	return count;
 }
 
-size_t Statistics::GetAllSizeOfDataReceived()
+size_t StatisticBuilder::GetAllSizeOfDataReceived()
 {
 	size_t count = 0;
 	for (auto connection : _conecions_info)
@@ -29,7 +30,7 @@ size_t Statistics::GetAllSizeOfDataReceived()
 	return count;
 }
 
-size_t Statistics::GetSizeOfDataSent(const std::string ip)
+size_t StatisticBuilder::GetSizeOfDataSent(const std::string ip)
 {
 	auto connection = _conecions_info.find(ip);
 	if (connection != _conecions_info.end())
@@ -38,7 +39,7 @@ size_t Statistics::GetSizeOfDataSent(const std::string ip)
 		return 0;
 }
 
-size_t Statistics::GetAllSizeOfDataReceived(const std::string ip)
+size_t StatisticBuilder::GetAllSizeOfDataReceived(const std::string ip)
 {
 	auto connection = _conecions_info.find(ip);
 	if (connection != _conecions_info.end())
@@ -47,7 +48,7 @@ size_t Statistics::GetAllSizeOfDataReceived(const std::string ip)
 		return 0;
 }
 
-void Statistics::OpenConnection(const sockaddr_in sockaddr)
+void StatisticBuilder::OpenConnection(const sockaddr_in sockaddr)
 {
 	std::string ip(inet_ntoa(sockaddr.sin_addr));
 
@@ -55,7 +56,7 @@ void Statistics::OpenConnection(const sockaddr_in sockaddr)
 	_conecions_info[ip].last_time_start = time(NULL);
 }
 
-void Statistics::CloseConnection(const sockaddr_in sockaddr)
+void StatisticBuilder::CloseConnection(const sockaddr_in sockaddr)
 {
 	std::string ip(inet_ntoa(sockaddr.sin_addr));
 
@@ -66,7 +67,7 @@ void Statistics::CloseConnection(const sockaddr_in sockaddr)
 		_conecions_info[ip].times = 0;
 }
 
-void Statistics::ClientGetData(const sockaddr_in sockaddr, const char *buffer, const size_t len)
+void StatisticBuilder::ClientGetData(const sockaddr_in sockaddr, const char *buffer, const size_t len)
 {
 	std::string ip(inet_ntoa(sockaddr.sin_addr));
 
@@ -74,7 +75,7 @@ void Statistics::ClientGetData(const sockaddr_in sockaddr, const char *buffer, c
 	_conecions_info[ip].size_data_received += len;
 }
 
-void Statistics::ClientSendData(const sockaddr_in sockaddr, const char *buffer, const size_t len)
+void StatisticBuilder::ClientSendData(const sockaddr_in sockaddr, const char *buffer, const size_t len)
 {
 	std::string ip(inet_ntoa(sockaddr.sin_addr));
 

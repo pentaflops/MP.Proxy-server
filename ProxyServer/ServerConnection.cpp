@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "ServerConnection.h"
+#include "ServerConnection.hpp"
 
 int ServerConnection::Connecting()
 {
@@ -20,20 +20,20 @@ int ServerConnection::Connecting()
 	return 0;
 }
 
-size_t ServerConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Event)
+int ServerConnection::GetData(char *buffer, int size_of_buffer, Event *_Event)
 {
 	int len = recv(_socket, buffer, size_of_buffer, 0);
 
 	if (len == SOCKET_ERROR || len <= 0)
 		_alive = false;
-	
+
 	if (_Event != nullptr)
 		_Event->ServerGetData(_sock_addr, buffer, len);
 
 	return len;
 }
 
-void ServerConnection::SendData(const char *buffer, size_t len, Event *_Event)
+void ServerConnection::SendData(const char *buffer, int len, Event *_Event)
 {
 	int result = send(_socket, buffer, len, 0);
 

@@ -1,50 +1,56 @@
 #include "stdafx.h"
-#include "ClientConnection.h"
+#include "ClientConnection.hpp"
 
-// Необходимо переписать красиво, чтобы поддерживались как минимум GET и POST запросы
 int ClientConnection::GetSocketAddress(const char *buffer, size_t len, sockaddr_in &sockaddr)
 {
-	std::string str(buffer);
-	size_t start = str.find("Host: ") + 6;
-	size_t count = str.find("\r\n", start) - start;
-
-	auto host = str.substr(start, count);
-
-	int port = 80;
-
-	size_t delivery_port = host.find(':');
-	if (delivery_port != std::string::npos)
+	try
 	{
-		port = stoi(host.substr(delivery_port + 1, host.length()));
-		host = host.substr(0, delivery_port);
-	}
+		std::string str(buffer);
+		size_t ip_start = str.find("Host: ") + 6;
+		size_t ip_len = str.find("\r\n", ip_start) - ip_start;
 
-	//sockaddr_in server;
-	sockaddr.sin_family = AF_INET;
+		auto ip = str.substr(ip_start, ip_len);
 
-	hostent *hp;
-	if (isalpha(host.c_str()[0])) {   /* server address is a name */
-		hp = gethostbyname(host.c_str());
-	}
-	else  { /* Convert nnn.nnn address to a usable one */
-		u_int addr = inet_addr(host.c_str());
-		hp = gethostbyaddr((char *)&addr, 4, AF_INET);
-	}
-	if (hp != NULL)
-	{
+		int port = 80;
+
+		size_t delivery_port = ip.find(':');
+		if (delivery_port != std::string::npos)
+		{
+			port = stoi(ip.substr(delivery_port + 1, ip.length()));
+			ip = ip.substr(0, delivery_port);
+		}
+
+		sockaddr.sin_family = AF_INET;
+
+		hostent *hp;
+		if (isalpha(ip.c_str()[0]))
+		{
+			hp = gethostbyname(ip.c_str());
+		}
+		else
+		{
+			u_int addr = inet_addr(ip.c_str());
+			hp = gethostbyaddr((char *)&addr, 4, AF_INET);
+		}
+
+		if (hp == NULL)
+			return 1;
+
 		memset(&sockaddr, 0, sizeof(sockaddr));
 		memcpy(&(sockaddr.sin_addr), hp->h_addr, hp->h_length);
-		//sockaddr.sin_addr.s_addr = *(u_long *)hs->h_addr;
 		sockaddr.sin_family = hp->h_addrtype;
 		sockaddr.sin_port = htons(port);
-
-		//Заполняем адресс из HTTP
+	}
+	// Ловим непредвиденные исключения и выходим с ошибкой
+	catch (std::exception err)
+	{
+		return 1;
 	}
 
 	return 0;
 }
 
-size_t ClientConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Event)
+int ClientConnection::GetData(char *buffer, int size_of_buffer, Event *_Event)
 {
 	int len = recv(_socket, buffer, size_of_buffer, 0);
 
@@ -59,7 +65,7 @@ size_t ClientConnection::GetData(char *buffer, size_t size_of_buffer, Event *_Ev
 	return len;
 }
 
-void ClientConnection::SendData(const char *buffer, size_t len, Event *_Event)
+void ClientConnection::SendData(const char *buffer, int len, Event *_Event)
 {
 	int result = send(_socket, buffer, len, 0);
 

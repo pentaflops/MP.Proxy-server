@@ -1,6 +1,8 @@
 #pragma once
 
-#include "IEventHandler.h"
+#include "ProxyServerApi.hpp"
+
+#include "IEventHandler.hpp"
 
 class Event
 {

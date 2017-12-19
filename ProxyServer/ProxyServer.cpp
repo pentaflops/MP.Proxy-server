@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "ClientConnection.h"
-#include "ServerConnection.h"
-#include "ProxyServer.h"
+#include "ClientConnection.hpp"
+#include "ServerConnection.hpp"
+#include "ProxyServer.hpp"
 
 int ProxyServer::StartServer(u_short port)
 {
@@ -10,7 +10,7 @@ int ProxyServer::StartServer(u_short port)
 	if (WSAStartup(0x202, &wsaData) != NO_ERROR)
 	{
 		WSACleanup();
-		return 1;
+		return FAILED_WSA_STARTUP;
 	}
 
 	// Инициализация главного сокета на listen
@@ -19,7 +19,7 @@ int ProxyServer::StartServer(u_short port)
 	if (_listen_socket == INVALID_SOCKET)
 	{
 		WSACleanup();
-		return 2;
+		return FAILED_CREATE_SOCKET;
 	}
 
 	sockaddr_in sock_addr;
@@ -32,14 +32,14 @@ int ProxyServer::StartServer(u_short port)
 	{
 		closesocket(_listen_socket);
 		WSACleanup();
-		return 3;
+		return FAILED_BIND_SOCKET;
 	}
 
 	if (listen(_listen_socket, SOMAXCONN) == SOCKET_ERROR)
 	{
 		closesocket(_listen_socket);
 		WSACleanup();
-		return 5;
+		return FAILED_LISTEN_SOCKET;
 	}
 
 	_server_started = true;
@@ -47,7 +47,7 @@ int ProxyServer::StartServer(u_short port)
 
 	_event.ProxyServerStarted(port);
 
-	return 0;
+	return SUCCESS_STARTUP;
 }
 
 void ProxyServer::StopServer()
@@ -61,7 +61,7 @@ DWORD ThreadWaitingNewConnections(LPVOID param)
 {
 	ProxyServer *proxy_server = (ProxyServer *)param;
 
-	while (proxy_server->isServerToggle())
+	while (proxy_server->isServerStarted())
 	{
 		sockaddr_in sock_addr;
 		int sock_addr_len = sizeof(sock_addr);
@@ -88,7 +88,7 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 
 	try
 	{
-		if (!proxy_server->isServerToggle())
+		if (!proxy_server->isServerStarted())
 		{
 			delete client_connection;
 			return 0;
@@ -104,7 +104,7 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 	char buffer[BUFF_SIZE];
 
 	// Получаем данные от клиента, чтобы узнать адресс ссервера (получателя)
-	size_t len = client_connection->GetData(buffer, sizeof(buffer));
+	int len = client_connection->GetData(buffer, sizeof(buffer));
 
 	if (client_connection->GetSocketAddress(buffer, len, sockaddr) != 0)
 	{
@@ -127,14 +127,14 @@ DWORD ThreadProcessingNewConnection(LPVOID param)
 
 
 	// Создаем два отдельных потока для передачи данных между клиентом и сервером
-	
+
 	// клиент-сервер
 	PairConnections client_to_server;
 	client_to_server.from = client_connection;
 	client_to_server.to = server_connection;
 	client_to_server.proxy_server = proxy_server;
 	HANDLE thread_client_to_server = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadProcessingConnectionData, (LPVOID)&client_to_server, 0, 0);
-	
+
 	// сервер-клиент
 	PairConnections server_to_client;
 	server_to_client.from = server_connection;
@@ -167,7 +167,7 @@ DWORD ThreadProcessingConnectionData(LPVOID param)
 	char buffer[BUFF_SIZE];
 	int len = 0;
 
-	while (connections->from->isAlive() && connections->to->isAlive() && proxy_server->isServerToggle())
+	while (connections->from->isAlive() && connections->to->isAlive() && proxy_server->isServerStarted())
 	{
 		memset(buffer, 0, sizeof(buffer));
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IConnection.h"
+#include "IConnection.hpp"
 
 class ServerConnection : public IConnection
 {
@@ -10,6 +10,6 @@ public:
 
 	int Connecting();
 
-	size_t GetData(char *buffer, size_t size_of_buffer, Event *_Event = nullptr);
-	void SendData(const char *buffer, size_t len, Event *_Event = nullptr);
+	int GetData(char *buffer, int size_of_buffer, Event *_Event = nullptr);
+	void SendData(const char *buffer, int len, Event *_Event = nullptr);
 };
